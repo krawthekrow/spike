@@ -5,6 +5,7 @@ local P = require("apps.pcap.pcap")
 local C = require("ffi").C
 local Ethernet = require("lib.protocol.ethernet")
 local IPV4 = require("lib.protocol.ipv4")
+local IPV6 = require("lib.protocol.ipv6")
 local link = require("core.link")
 local packet = require("core.packet")
 
@@ -18,14 +19,21 @@ require("networking_magic_numbers")
 
 local function runmain()
    local test_fragmentation = false
-   local test_ipv6 = true
+   local test_ipv6 = false
    local debug_bypass_spike = false
 
    godefs.Init()
-   godefs.AddBackend("http://cheesy-fries.mit.edu/health",
-                     IPV4:pton("1.3.5.7"), 4)
-   godefs.AddBackend("http://strawberry-habanero.mit.edu/health",
-                     IPV4:pton("2.4.6.8"), 4)
+   if test_ipv6 then
+      godefs.AddBackend("http://cheesy-fries.mit.edu/health",
+                        IPV6:pton("2001:db8:a0b:12f0::1"), 16)
+      godefs.AddBackend("http://strawberry-habanero.mit.edu/health",
+                        IPV6:pton("2001:db8:a0b:12f0::2"), 16) 
+   else
+      godefs.AddBackend("http://cheesy-fries.mit.edu/health",
+                        IPV4:pton("1.3.5.7"), 4)
+      godefs.AddBackend("http://strawberry-habanero.mit.edu/health",
+                        IPV4:pton("2.4.6.8"), 4)
+   end
    C.usleep(3000000) -- wait for backends to come up
 
    local network_config = {
@@ -64,11 +72,20 @@ local function runmain()
    config.app(c, "stream", TestStreamApp, {
       packets = packets
    })
-   config.app(c, "spike", Rewriting, {
-      src_mac = network_config.spike_mac,
-      dst_mac = network_config.router_mac,
-      ipv4_addr = network_config.spike_internal_addr
-   })
+
+   if test_ipv6 then
+      config.app(c, "spike", Rewriting, {
+         src_mac = network_config.spike_mac,
+         dst_mac = network_config.router_mac,
+         ipv6_addr = network_config.spike_internal_ipv6_addr
+      })
+   else
+      config.app(c, "spike", Rewriting, {
+         src_mac = network_config.spike_mac,
+         dst_mac = network_config.router_mac,
+         ipv4_addr = network_config.spike_internal_addr,
+      })
+   end
    config.app(c, "pcap_writer", P.PcapWriter, "test_out.pcap")
    if debug_bypass_spike then
       config.link(c, "stream.output -> pcap_writer.input")
