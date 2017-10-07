@@ -19,7 +19,8 @@ require("networking_magic_numbers")
 local function runmain()
    local test_fragmentation = false
    local test_ipv6 = true
-   local debug_bypass_spike = true
+   local debug_bypass_spike = false
+   local read_from_file = true
 
    godefs.Init()
    godefs.AddBackend("http://cheesy-fries.mit.edu/health",
@@ -61,9 +62,11 @@ local function runmain()
    end
 
    local c = config.new()
-   config.app(c, "stream", TestStreamApp, {
-      packets = packets
-   })
+   if not read_from_file then
+      config.app(c, "stream", TestStreamApp, {
+         packets = packets
+      })
+   end
    config.app(c, "spike", Rewriting, {
       src_mac = network_config.spike_mac,
       dst_mac = network_config.router_mac,
@@ -73,7 +76,12 @@ local function runmain()
    if debug_bypass_spike then
       config.link(c, "stream.output -> pcap_writer.input")
    else
-      config.link(c, "stream.output -> spike.input")
+      if read_from_file then
+         config.app(c, "pcap_reader", P.PcapReader, "input.pcap")
+         config.link(c, "pcap_reader.output -> spike.input")
+      else
+         config.link(c, "stream.output -> spike.input")
+      end
       config.link(c, "spike.output -> pcap_writer.input")
    end
 
