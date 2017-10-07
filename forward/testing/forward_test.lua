@@ -19,8 +19,8 @@ require("networking_magic_numbers")
 
 local function runmain()
    local test_fragmentation = false
-   local test_ipv6 = false
-   local debug_bypass_spike = false
+   local test_ipv6 = true
+   local debug_bypass_spike = true
 
    godefs.Init()
    if test_ipv6 then
