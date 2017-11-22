@@ -11,18 +11,12 @@ local ffi = require("ffi")
 local band = bit.band
 local rshift = bit.rshift
 
-local godefs = require("godefs")
-
 require("networking_magic_numbers")
 require("five_tuple")
 local IPFragReassembly = require("ip_frag/reassembly")
+local GoInterface = require("go_interface")
 
 _G._NAME = "rewriting"  -- Snabb requires this for some reason
-
--- Return the backend associated with a five-tuple
-local function get_backend(five_tuple, five_tuple_len)
-   return godefs.Lookup(five_tuple, five_tuple_len)
-end
 
 
 local Rewriting = {}
@@ -56,7 +50,8 @@ function Rewriting:new(opts)
        src_mac = opts.src_mac and Ethernet:pton(opts.src_mac),
        dst_mac = Ethernet:pton(opts.dst_mac),
        ttl = opts.ttl or 30,
-       ip_frag_reassembly = IPFragReassembly:new()},
+       ip_frag_reassembly = IPFragReassembly:new(),
+       go_interface = opts.go_interface or GoInterface:new()},
       {__index = Rewriting})
 end
 
@@ -193,7 +188,7 @@ function Rewriting:process_packet(i, o)
       datagram = new_datagram
    end
 
-   local backend, backend_len = get_backend(t, t_len)
+   local backend, backend_len = self.go_interface:lookup(t, t_len)
    if backend_len == 0 then
       P.free(p)
       return

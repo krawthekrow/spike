@@ -5,7 +5,7 @@ local TestStreamApp = {}
 function TestStreamApp:new(opts)
    return setmetatable({
       curr_packet_index = 1,
-      packets = opts.packets
+      packets = (opts or {}).packets
    }, {
       __index = TestStreamApp
    })

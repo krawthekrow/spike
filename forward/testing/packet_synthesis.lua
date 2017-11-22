@@ -86,6 +86,8 @@ function PacketSynthesisContext:new(network_config)
          parse_addr(network_config.spike_internal_addr, false),
       other_spike_internal_addr =
          parse_addr(network_config.other_spike_internal_addr, false),
+      backend_addr =
+         parse_addr(network_config.backend_addr, false),
       backend_vip_ipv6_addr =
          parse_addr(network_config.backend_vip_ipv6_addr, true),
       client_ipv6_addr =
@@ -93,7 +95,9 @@ function PacketSynthesisContext:new(network_config)
       spike_internal_ipv6_addr =
          parse_addr(network_config.spike_internal_ipv6_addr, true),
       other_spike_internal_ipv6_addr =
-         parse_addr(network_config.other_spike_internal_ipv6_addr, true)
+         parse_addr(network_config.other_spike_internal_ipv6_addr, true),
+      backend_ipv6_addr =
+         parse_addr(network_config.backend_ipv6_addr, true)
    })
    return setmetatable({
       network_config = parsed_network_config,
@@ -136,9 +140,9 @@ function PacketSynthesisContext:make_ip_header(config)
    local ip_header
    if l3_prot == L3_IPV6 then
       ip_header = IPV6:new({
-         src = config.src_ipv6_addr or config.src_addr or
+         src = config.src_ipv6_addr or
             self.network_config.client_ipv6_addr,
-         dst = config.dst_ipv6_addr or config.dst_addr or
+         dst = config.dst_ipv6_addr or
             self.network_config.backend_vip_ipv6_addr,
          next_header = config.inner_prot or config.l4_prot or L4_TCP,
          hop_limit = config.ttl or self.network_config.ttl or 30
@@ -248,7 +252,10 @@ function PacketSynthesisContext:add_spike_to_backend_ip_header(config)
          self.network_config.spike_internal_addr,
       src_ipv6_addr = config.spike_internal_ipv6_addr or
          self.network_config.spike_internal_ipv6_addr,
-      dst_addr = config.backend_addr
+      dst_addr = config.backend_addr or
+         self.network_config.backend_addr,
+      dst_ipv6_addr = config.backend_ipv6_addr or
+         self.network_config.backend_ipv6_addr
    }))
 end
 
